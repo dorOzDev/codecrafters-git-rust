@@ -1,13 +1,20 @@
-use std::{fs, io::{Read, Write}, path::PathBuf};
+use std::{fs, io::{self, Read, Write}, path::PathBuf};
+use anyhow::Error;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use std::fs::File;
 use sha1::{Sha1, Digest};
 use crate::object::{ObjectType, encode_object};
 
-pub fn run(args: &[String]) -> Result<String, Box<dyn std::error::Error>> {
+pub fn run(args: &[String]) -> io::Result<()> {
     if args.len() == 3 && args[1] == "-w" {
-        return hash_object(&args[2], true)
+        match hash_object(&args[2], true) {
+        Ok(hash) => {
+            println!("{}", hash);
+            Ok(())
+        }
+        Err(e) => Err(io::Error::new(io::ErrorKind::Other, e.to_string())),
+    }
     } else {
         eprintln!("unsupported sub command");
         std::process::exit(1)
