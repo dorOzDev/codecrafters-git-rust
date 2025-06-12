@@ -1,10 +1,9 @@
 use std::{fs, io::{self, Read, Write}, path::PathBuf};
-use anyhow::Error;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use std::fs::File;
 use sha1::{Sha1, Digest};
-use crate::object::{ObjectType, encode_object};
+use crate::objects::{ObjectType, encode_object};
 
 pub fn run(args: &[String]) -> io::Result<()> {
     if args.len() == 3 && args[1] == "-w" {

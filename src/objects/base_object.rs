@@ -1,12 +1,14 @@
 
 pub enum ObjectType {
     Blob,
+    Tree,
 }
 
 impl ObjectType {
     pub fn as_str(&self) -> &'static str {
         match self {
             ObjectType::Blob => "blob",
+            ObjectType::Tree => "tree",
         }
     }
 }

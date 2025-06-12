@@ -1,5 +1,5 @@
 mod commands;
-mod object;
+mod objects;
 use std::env;
 use std::io;
 

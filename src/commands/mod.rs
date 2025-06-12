@@ -1,9 +1,7 @@
 pub mod init;
 pub mod cat_file;
 pub mod hash_object;
-
 use std::io;
-
 pub fn run(args: &[String]) -> io::Result<()> {
     match args.get(0).map(String::as_str) {
         Some("init") => init::run(),
