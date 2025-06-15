@@ -62,14 +62,19 @@ pub enum FileMode {
 }
 
 impl FileMode {
+    pub fn from_octal_str(s: &str) -> Option<Self> {
+        // Parse from base-8 string (like "40000", "100644", etc.)
+        let mode = u32::from_str_radix(s, 8).ok()?;
+        Self::from_u32(mode)
+    }
 
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s {
-           "100644" => Some(FileMode::Normal),
-            "100755" => Some(FileMode::Executable),
-            "120000" => Some(FileMode::Symlink),
-            "040000" => Some(FileMode::Directory),
-           _ => None
+    pub fn from_u32(mode: u32) -> Option<Self> {
+        match mode {
+            0o100644 => Some(FileMode::Normal),
+            0o100755 => Some(FileMode::Executable),
+            0o120000 => Some(FileMode::Symlink),
+            0o040000 => Some(FileMode::Directory),
+            _ => None,
         }
     }
 
@@ -82,6 +87,7 @@ impl FileMode {
         }
     }
 }
+
 
 impl Display for FileMode {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {

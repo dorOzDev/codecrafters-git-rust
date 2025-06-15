@@ -47,7 +47,7 @@ impl Tree {
     while !cursor.is_empty() {
         let space_index = cursor.iter().position(|&b| b == b' ').ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Malformed tree entry: missing space"))?;
         let mode_str = std::str::from_utf8(&cursor[..space_index]).map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid UTF-8 in mode"))?;
-        let mode = FileMode::from_str(mode_str).ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, format!("Unknown file mode: {}", mode_str)))?;
+        let mode = FileMode::from_octal_str(mode_str).ok_or_else(|| {io::Error::new(io::ErrorKind::InvalidData, format!("Unknown file mode: {}", mode_str))})?;
         cursor = &cursor[space_index + 1..];
 
         let null_index = cursor.iter().position(|&b| b == 0).ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Malformed tree entry: missing null"))?;
