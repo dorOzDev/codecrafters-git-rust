@@ -1,4 +1,4 @@
-use std::fmt::{write, Display, Formatter};
+use std::fmt::{Display, Formatter};
 use std::io::{self, Read};
 use std::fs::File;
 use std::path::PathBuf;
