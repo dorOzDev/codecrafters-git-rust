@@ -8,7 +8,7 @@ pub fn run(args: &[String]) -> io::Result<()> {
         Some("init") => init::run(),
         Some("cat-file") => cat_file::run(args),
         Some("hash-object") => hash_object::run(args),
-        Some("ls-tree") => ls_tree::run(args),
+        Some("ls-tree") => ls_tree::run(&args[1..]),
         Some(cmd) => {
             eprintln!("unknown command: {}", cmd);
             Ok(())
