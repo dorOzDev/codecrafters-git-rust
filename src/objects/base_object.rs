@@ -1,10 +1,17 @@
 use std::fmt::{Formatter, Display};
+use std::io::{self, Read};
+use std::fs::File;
+use std::path::PathBuf;
+use flate2::read::ZlibDecoder;
+
+use crate::constants::{GIT_OBJECTS_DIR, HASH_LENGTH};
 
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ObjectType {
     Blob,
     Tree,
+    Unknown,
 }
 
 impl ObjectType {
@@ -12,6 +19,15 @@ impl ObjectType {
         match self {
             ObjectType::Blob => "blob",
             ObjectType::Tree => "tree",
+            ObjectType::Unknown => "unknown",
+        }
+    }
+
+    pub fn from_str(str: &str) -> Self {
+        match str.to_ascii_lowercase().as_str() {
+            "blob" => ObjectType::Blob,
+            "tree" => ObjectType::Tree,
+            _ => ObjectType::Unknown,
         }
     }
 }
@@ -57,5 +73,32 @@ impl FileMode {
 impl Display for FileMode {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
+    }
+}
+
+pub fn read_object(hash :&str) -> io::Result<(ObjectType, Vec<u8>)> {
+    if hash.len() != HASH_LENGTH {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid hash length"));
+    }
+    
+    let (dir, file) = hash.split_at(2);
+    let mut object_path = PathBuf::from(GIT_OBJECTS_DIR);
+    object_path.push(dir);
+    object_path.push(file);
+
+    let file = File::open(&object_path)?;
+    let mut decoder = ZlibDecoder::new(file);
+    let mut decompressed = Vec::new();
+    _= decoder.read_to_end(&mut decompressed);
+
+    if let Some(null_index) = decompressed.iter().position(|&b| b == 0) {
+        let header = &decompressed[..null_index];
+        let content = decompressed[null_index + 1..].to_vec();
+        let header_str = String::from_utf8_lossy(header);
+        let object_type_str = header_str.split(' ').next().unwrap_or("");
+        let object_type = ObjectType::from_str(object_type_str);
+        Ok((object_type, content))
+    } else {
+        Err(io::Error::new(io::ErrorKind::InvalidData, "Malformed object: missing header"))
     }
 }

@@ -4,6 +4,7 @@ use flate2::Compression;
 use std::fs::File;
 use sha1::{Sha1, Digest};
 use crate::objects::{ObjectType, encode_object};
+use crate::constants::*;
 
 pub fn run(args: &[String]) -> io::Result<()> {
     if args.len() == 3 && args[1] == "-w" {
@@ -33,7 +34,7 @@ fn hash_object(file_name: &str, write: bool) -> Result<String, Box<dyn std::erro
 
     if write {
         let(dir, file) = hash.split_at(2);
-        let mut path = PathBuf::from(".git/objects");
+        let mut path = PathBuf::from(GIT_OBJECTS_DIR);
         path.push(dir);
         fs::create_dir(&path)?;
         path.push(file);
