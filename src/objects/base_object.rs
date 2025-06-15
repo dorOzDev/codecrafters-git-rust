@@ -30,6 +30,13 @@ impl ObjectType {
             _ => ObjectType::Unknown,
         }
     }
+
+    pub fn from_mode(mode: &FileMode) -> Self {
+        match mode {
+            FileMode::Directory=> ObjectType::Tree,
+            _ => ObjectType::Blob,
+        }
+    }
 }
 
 pub fn encode_object(obj_type: ObjectType, data: &[u8]) -> Vec<u8> {
