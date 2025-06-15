@@ -1,4 +1,4 @@
-use std::fmt::{Formatter, Display};
+use std::fmt::{write, Display, Formatter};
 use std::io::{self, Read};
 use std::fs::File;
 use std::path::PathBuf;
@@ -36,6 +36,12 @@ impl ObjectType {
             FileMode::Directory=> ObjectType::Tree,
             _ => ObjectType::Blob,
         }
+    }
+}
+
+impl Display for ObjectType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
     }
 }
 

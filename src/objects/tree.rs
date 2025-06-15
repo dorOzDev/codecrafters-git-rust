@@ -14,7 +14,7 @@ pub struct Tree {
 }
 
 impl Tree {
-    pub fn walk_tree<F: FnMut(&TreeEntry, &str)>(&self, parent_path: &str,callback: &mut F,) -> io::Result<()> {
+    pub fn walk_tree<F: FnMut(&TreeEntry, &str)>(&self, parent_path: &str,callback: &mut F, recursive: bool) -> io::Result<()> {
         for entry in &self.entries {
             let full_path = if parent_path.is_empty() {
                 entry.name.clone()
@@ -24,9 +24,9 @@ impl Tree {
 
             callback(entry, &full_path);
 
-            if entry.object_type == ObjectType::Tree {
+            if recursive && entry.object_type == ObjectType::Tree {
                 let sub_tree = Tree::load_tree_from_hash(&entry.hash)?;
-                sub_tree.walk_tree(&full_path, callback)?;
+                sub_tree.walk_tree(&full_path, callback, recursive)?;
             }
         }
 
