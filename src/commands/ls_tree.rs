@@ -124,7 +124,7 @@ impl TreeEntryPrinter for DefaultPrinter {
             "{} {} {}\t{}",
             entry.mode,
             entry.object_type,
-            entry.hash,
+            entry.hash.to_hex(),
             path
         );
     }

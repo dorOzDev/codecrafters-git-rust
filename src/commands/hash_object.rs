@@ -2,8 +2,7 @@ use std::{fs, io::{self, Read, Write}, path::PathBuf};
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use std::fs::File;
-use sha1::{Sha1, Digest};
-use crate::objects::{ObjectType, encode_object};
+use crate::{hash::GitHash, objects::{encode_object, ObjectType}};
 use crate::constants::*;
 
 pub fn run(args: &[String]) -> io::Result<()> {
@@ -27,13 +26,10 @@ fn hash_object(file_name: &str, write: bool) -> Result<String, Box<dyn std::erro
     let mut contents  = Vec::new();
     file.read_to_end(&mut contents)?;
     let object = encode_object(ObjectType::Blob, &contents);
-    let mut hasher = Sha1::new();
-    hasher.update(&object);
-
-    let hash = hex::encode(hasher.finalize());
+    let hash = GitHash::from_bytes(&object);
 
     if write {
-        let(dir, file) = hash.split_at(2);
+        let(dir, file) = hash.to_path_parts();
         let mut path = PathBuf::from(GIT_OBJECTS_DIR);
         path.push(dir);
         fs::create_dir(&path)?;
@@ -46,5 +42,5 @@ fn hash_object(file_name: &str, write: bool) -> Result<String, Box<dyn std::erro
             fs::write(path,compressed)?;
         }
     }
-    Ok(hash)
+    Ok(hash.to_hex())
 }

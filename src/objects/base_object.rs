@@ -4,7 +4,8 @@ use std::fs::File;
 use std::path::PathBuf;
 use flate2::read::ZlibDecoder;
 
-use crate::constants::{GIT_OBJECTS_DIR, HASH_LENGTH};
+use crate::constants::{GIT_OBJECTS_DIR};
+use crate::hash::GitHash;
 
 
 #[derive(Debug, PartialEq, Eq)]
@@ -53,7 +54,7 @@ pub fn encode_object(obj_type: ObjectType, data: &[u8]) -> Vec<u8> {
     result
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum FileMode {
     Normal = 0o100644,
     Executable = 0o100755,
@@ -95,12 +96,10 @@ impl Display for FileMode {
     }
 }
 
-pub fn read_object(hash :&str) -> io::Result<(ObjectType, Vec<u8>)> {
-    if hash.len() != HASH_LENGTH {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid hash length"));
-    }
-    
-    let (dir, file) = hash.split_at(2);
+pub fn read_object(hash_str :&str) -> io::Result<(ObjectType, Vec<u8>)> {
+    let hash = GitHash::from_hex(hash_str)?;
+    let (dir, file) = hash.to_path_parts();
+
     let mut object_path = PathBuf::from(GIT_OBJECTS_DIR);
     object_path.push(dir);
     object_path.push(file);

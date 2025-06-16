@@ -1,11 +1,11 @@
 use std::io;
 
-use crate::objects::{read_object, FileMode, ObjectType};
+use crate::{hash::{GitHash, HASH_SIZE_BYTES}, objects::{read_object, FileMode, ObjectType}};
 
 pub struct TreeEntry {
     pub mode: FileMode,
     pub object_type: ObjectType,
-    pub hash: String,
+    pub hash: GitHash,
     pub name: String
 }
 
@@ -25,7 +25,7 @@ impl Tree {
             callback(entry, &full_path);
 
             if recursive && entry.object_type == ObjectType::Tree {
-                let sub_tree = Tree::load_tree_from_hash(&entry.hash)?;
+                let sub_tree = Tree::load_tree_from_hash(&entry.hash.to_hex())?;
                 sub_tree.walk_tree(&full_path, callback, recursive)?;
             }
         }
@@ -56,12 +56,12 @@ impl Tree {
             .to_string();
         cursor = &cursor[null_index + 1..];
 
-        if cursor.len() < 20 {
+        if cursor.len() < HASH_SIZE_BYTES {
             return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "Unexpected end of hash data"));
         }
-        let hash_bytes = &cursor[..20];
-        let hash = hex::encode(hash_bytes);
-        cursor = &cursor[20..];
+        let hash_bytes = &cursor[..HASH_SIZE_BYTES];
+        let hash = GitHash::from_bytes(hash_bytes);
+        cursor = &cursor[HASH_SIZE_BYTES..];
         let object_type = ObjectType::from_mode(&mode);
 
         entries.push(TreeEntry {
