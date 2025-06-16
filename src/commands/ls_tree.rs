@@ -1,46 +1,41 @@
 use std::{fmt, io};
 
-use crate::{objects::{read_object, ObjectType, Tree}};
+use crate::objects::{read_object, ObjectType, Tree, TreeEntry};
 
 
 pub fn run(args: &[String]) -> io::Result<()> {
     let cmd = parse_command(args)?;
-    let (object_type, _) = read_object(&cmd.tree_ish)?;
+    let (object_type, _) = read_object(&cmd.tree_ish())?;
     if object_type != ObjectType::Tree {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, format!("Object {} is not a tree", cmd.tree_ish)));
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, format!("Object {} is not a tree", cmd.tree_ish())));
     }
 
-    let tree = Tree::load_tree_from_hash(&cmd.tree_ish)?;
-        tree.walk_tree("", &mut |entry, path| {
-        if cmd.options.name_only {
-            println!("{}", path);
-        } else {
-            println!(
-                "{} {} {}\t{}",
-                entry.mode,
-                entry.object_type,
-                entry.hash,
-                path
-            );
-        }
-    } ,false)?;
+    let tree = Tree::load_tree_from_hash(&cmd.tree_ish())?;
+        tree.walk_tree(cmd.base_path(), &mut |entry, path| {
+        cmd.printer().print(entry, path);
+    },cmd.recursive())?;
+
     Ok(())
 }
 
-fn parse_command(args: &[String]) -> io::Result<LsTreeCommand> {
+pub fn parse_command(args: &[String]) -> io::Result<LsTreeCommand> {
     let mut tree_ish: Option<String> = None;
-    let mut name_only = false;
+    let mut printer: Option<Box<dyn TreeEntryPrinter>> = None;
+
     for arg in args {
         match arg.as_str() {
-            "--name-only" => name_only = true,
+            "--name-only" => {
+                printer = Some(Box::new(NameOnlyPrinter));
+            }
             x if x.starts_with('-') => {
                 return Err(CommandParseError::UnknownFlag(x.to_string()).into());
             }
             other => {
-                if tree_ish.is_some() {
-                    return Err(CommandParseError::InvalidArgument(other.to_string()).into());
+                if let Some(already) = tree_ish.replace(other.to_string()) {
+                    return Err(CommandParseError::InvalidArgument(format!(
+                        "Multiple tree-ish values: '{}' and '{}'", already, other
+                    )).into());
                 }
-                tree_ish = Some(other.to_string());
             }
         }
     }
@@ -49,21 +44,39 @@ fn parse_command(args: &[String]) -> io::Result<LsTreeCommand> {
         CommandParseError::MissingArgument("tree-ish (e.g. a hash or HEAD)".to_string())
     })?;
 
+    let printer = printer.unwrap_or_default();
+
     Ok(LsTreeCommand {
-        options: LsTreeOptions {
-            name_only,
-        },
-        tree_ish: tree_ish,
+        tree_ish,
+        base_path: "".to_string(),
+        printer,
+        recursive: false,
     })
 }
 
-pub struct LsTreeOptions {
-    pub name_only: bool,
+pub struct LsTreeCommand {
+    tree_ish: String,
+    base_path: String,
+    printer: Box<dyn TreeEntryPrinter>,
+    recursive: bool,
 }
 
-pub struct LsTreeCommand {
-    pub options: LsTreeOptions,
-    pub tree_ish: String,
+impl LsTreeCommand {
+        pub fn tree_ish(&self) -> &str {
+        &self.tree_ish
+    }
+
+    pub fn base_path(&self) -> &str {
+        &self.base_path
+    }
+
+    pub fn printer(&self) -> &dyn TreeEntryPrinter {
+        self.printer.as_ref()
+    }
+
+    pub fn recursive(&self) -> bool {
+        self.recursive
+    }
 }
 
 #[derive(Debug)]
@@ -88,5 +101,37 @@ impl std::error::Error for CommandParseError {}
 impl From<CommandParseError> for io::Error {
     fn from(err: CommandParseError) -> Self {
         io::Error::new(io::ErrorKind::InvalidInput, err)
+    }
+}
+
+pub trait  TreeEntryPrinter {
+    fn print(&self, entry: &TreeEntry, path: &str);
+}
+
+pub struct NameOnlyPrinter;
+
+impl TreeEntryPrinter for NameOnlyPrinter {
+    fn print(&self, _entry: &TreeEntry, path: &str) {
+        println!("{}", path);
+    }
+}
+
+pub struct DefaultPrinter;
+
+impl TreeEntryPrinter for DefaultPrinter {
+    fn print(&self, entry: &TreeEntry, path: &str) {
+        println!(
+            "{} {} {}\t{}",
+            entry.mode,
+            entry.object_type,
+            entry.hash,
+            path
+        );
+    }
+}
+
+impl Default for Box<dyn TreeEntryPrinter> {
+    fn default() -> Self {
+        Box::new(DefaultPrinter)
     }
 }
