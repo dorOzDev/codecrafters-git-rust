@@ -3,6 +3,7 @@ mod objects;
 use std::env;
 use std::io;
 pub mod constants;
+pub mod index;
 pub mod hash;
 
 fn main() -> io::Result<()> {

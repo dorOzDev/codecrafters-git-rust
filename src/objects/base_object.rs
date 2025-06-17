@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 use std::io::{self, Read};
-use std::fs::File;
-use std::path::PathBuf;
+use std::fs::{self, File};
+use std::path::{Path, PathBuf};
 use flate2::read::ZlibDecoder;
 
 use crate::constants::{GIT_OBJECTS_DIR};
@@ -87,6 +87,36 @@ impl FileMode {
             FileMode::Directory => "040000",
         }
     }
+    
+    pub fn from_path(path: &Path) -> io::Result<Self> {
+        let metadata = fs::symlink_metadata(path)?;
+
+        if metadata.file_type().is_symlink() {
+            return Ok(FileMode::Symlink);
+        }
+
+        if metadata.is_dir() {
+            return Ok(FileMode::Directory);
+        }
+
+        if metadata.is_file() {
+            // On Unix, we could check for execute bits.
+            // On Windows, we fallback to 'Normal' always.
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let perm = metadata.permissions().mode();
+                if perm & 0o111 != 0 {
+                    return Ok(FileMode::Executable);
+                }
+            }
+
+            return Ok(FileMode::Normal);
+        }
+
+        Err(io::Error::new(io::ErrorKind::InvalidData, "Unsupported file type"))
+    }
+
 }
 
 

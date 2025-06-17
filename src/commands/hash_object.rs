@@ -7,20 +7,16 @@ use crate::constants::*;
 
 pub fn run(args: &[String]) -> io::Result<()> {
     if args.len() == 3 && args[1] == "-w" {
-        match hash_object(&args[2], true) {
-        Ok(hash) => {
-            println!("{}", hash);
-            Ok(())
-        }
-        Err(e) => Err(io::Error::new(io::ErrorKind::Other, e.to_string())),
-    }
+        let hash = hash_object(&args[2], true)?;
+        println!("{}", hash.to_hex());
+        Ok(())
     } else {
         eprintln!("unsupported sub command");
-        std::process::exit(1)
+        std::process::exit(1);
     }
 }
 
-fn hash_object(file_name: &str, write: bool) -> Result<String, Box<dyn std::error::Error>> {
+pub fn hash_object(file_name: &str, write_to_fs: bool) -> io::Result<GitHash> {
     let file_path = PathBuf::from(&file_name);
     let mut file = File::open(&file_path)?;
     let mut contents  = Vec::new();
@@ -28,11 +24,11 @@ fn hash_object(file_name: &str, write: bool) -> Result<String, Box<dyn std::erro
     let object = encode_object(ObjectType::Blob, &contents);
     let hash = GitHash::from_bytes(&object);
 
-    if write {
+    if write_to_fs {
         let(dir, file) = hash.to_path_parts();
         let mut path = PathBuf::from(GIT_OBJECTS_DIR);
         path.push(dir);
-        fs::create_dir(&path)?;
+        fs::create_dir_all(&path)?;
         path.push(file);
 
         if !path.exists() {
@@ -42,5 +38,5 @@ fn hash_object(file_name: &str, write: bool) -> Result<String, Box<dyn std::erro
             fs::write(path,compressed)?;
         }
     }
-    Ok(hash.to_hex())
+    Ok(hash)
 }

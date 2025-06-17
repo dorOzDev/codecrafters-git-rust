@@ -2,13 +2,18 @@ pub mod init;
 pub mod cat_file;
 pub mod hash_object;
 pub mod ls_tree;
+pub mod inspect_index;
+pub mod add;
 use std::io;
+
 pub fn run(args: &[String]) -> io::Result<()> {
     match args.get(0).map(String::as_str) {
         Some("init") => init::run(),
         Some("cat-file") => cat_file::run(args),
         Some("hash-object") => hash_object::run(args),
         Some("ls-tree") => ls_tree::run(&args[1..]),
+        Some("add") => add::run(&args[1..]),
+        Some("inspect-index") => inspect_index::run(),
         Some(cmd) => {
             eprintln!("unknown command: {}", cmd);
             Ok(())
