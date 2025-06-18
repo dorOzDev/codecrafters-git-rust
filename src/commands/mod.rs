@@ -4,6 +4,7 @@ pub mod hash_object;
 pub mod ls_tree;
 pub mod inspect_index;
 pub mod add;
+pub mod write_tree;
 use std::io;
 
 pub fn run(args: &[String]) -> io::Result<()> {
@@ -14,6 +15,7 @@ pub fn run(args: &[String]) -> io::Result<()> {
         Some("ls-tree") => ls_tree::run(&args[1..]),
         Some("add") => add::run(&args[1..]),
         Some("inspect-index") => inspect_index::run(),
+        Some("write-tree") => write_tree::run(),
         Some(cmd) => {
             eprintln!("unknown command: {}", cmd);
             Ok(())
