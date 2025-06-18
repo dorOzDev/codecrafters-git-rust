@@ -29,7 +29,7 @@ pub fn run(args: &[String]) -> io::Result<()> {
         let hash = write_object_from_path(crate::objects::ObjectType::Blob, &path)?; 
 
         let mode = FileMode::from_path(&path)?;
-        let rel_path = path.strip_prefix(".").unwrap_or(&path).to_string_lossy().to_string();
+        let rel_path = path.strip_prefix(std::env::current_dir()?.as_path()).unwrap_or(&path).to_string_lossy().to_string();
 
         let entry = IndexEntry {
             mode,
