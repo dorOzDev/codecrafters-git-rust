@@ -164,7 +164,7 @@ pub fn write_object(object_type: ObjectType, data: &[u8]) -> io::Result<GitHash>
     path.push(file);
 
     if !path.exists() {
-        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::fast());
         encoder.write_all(&encoded)?;
         let compressed = encoder.finish()?;
         fs::write(path, compressed)?;
