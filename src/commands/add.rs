@@ -29,7 +29,8 @@ pub fn run(args: &[String]) -> io::Result<()> {
         let hash = write_object_from_path(crate::objects::ObjectType::Blob, &path)?; 
 
         let mode = FileMode::from_path(&path)?;
-        let rel_path = path.strip_prefix(std::env::current_dir()?.as_path()).unwrap_or(&path).to_string_lossy().to_string();
+        let cwd = std::env::current_dir()?;
+        let rel_path = normalize_git_path(&path, &cwd).unwrap_or_else(|err| panic!("normalize git path failed: {}", err));
 
         let entry = IndexEntry {
             mode,
@@ -62,4 +63,31 @@ fn collect_all_files(root: &str) -> io::Result<Vec<PathBuf>> {
     }
 
     Ok(result)
+}
+
+pub fn normalize_git_path(full_path: &Path, repo_root: &Path) -> Result<String, String> {
+    // Step 1: Try to canonicalize the input path
+    let abs_path = full_path.canonicalize()
+        .map_err(|e| format!("Failed to canonicalize path '{}': {}", full_path.display(), e))?;
+
+    let repo_root = repo_root.canonicalize()
+        .map_err(|e| format!("Failed to canonicalize repo root '{}': {}", repo_root.display(), e))?;
+
+    // Step 2: Try to strip the repo root from the full path
+    let rel_path = abs_path.strip_prefix(&repo_root)
+        .map_err(|e| format!(
+            "Failed to strip prefix:\n  full path: '{}'\n  repo root: '{}'\n  error: {}",
+            abs_path.display(),
+            repo_root.display(),
+            e
+        ))?;
+
+    // Step 3: Normalize to forward slashes
+    let normalized = rel_path
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("/");
+
+    Ok(normalized)
 }
