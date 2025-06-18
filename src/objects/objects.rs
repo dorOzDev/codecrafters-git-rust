@@ -1,11 +1,14 @@
 use std::fmt::{Display, Formatter};
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
+use flate2::write::ZlibEncoder;
 use flate2::read::ZlibDecoder;
+use flate2::Compression;
 
 use crate::constants::{GIT_OBJECTS_DIR};
 use crate::hash::GitHash;
+use crate::utils::file_utils::read_file;
 
 
 #[derive(Debug, PartialEq, Eq)]
@@ -100,8 +103,6 @@ impl FileMode {
         }
 
         if metadata.is_file() {
-            // On Unix, we could check for execute bits.
-            // On Windows, we fallback to 'Normal' always.
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
@@ -149,4 +150,37 @@ pub fn read_object(hash_str :&str) -> io::Result<(ObjectType, Vec<u8>)> {
     } else {
         Err(io::Error::new(io::ErrorKind::InvalidData, "Malformed object: missing header"))
     }
+}
+/*
+    write the object to the disk and return the calculated hash value of the object
+*/
+pub fn write_object(object_type: ObjectType, data: &[u8]) -> io::Result<GitHash> {
+    let (hash, encoded) = hash_object(object_type, data);
+    let (dir, file) = hash.to_path_parts();
+    let mut path = PathBuf::from(GIT_OBJECTS_DIR);
+
+    path.push(dir);
+    fs::create_dir_all(&path)?;
+    path.push(file);
+
+    if !path.exists() {
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(&encoded)?;
+        let compressed = encoder.finish()?;
+        fs::write(path, compressed)?;
+    }
+
+    Ok(hash)
+}
+/*
+    write the object to the disk from path and return the calculated hash value of the object
+*/
+pub fn write_object_from_path(object_type: ObjectType, file_path: &Path) -> io::Result<GitHash> {
+    let contents = read_file(file_path)?;
+    write_object(object_type, &contents)
+}
+
+pub fn hash_object(object_type: ObjectType, data: &[u8]) -> (GitHash, Vec<u8>) {
+    let encoded = encode_object(object_type, data);
+    (GitHash::from_bytes(&encoded), encoded)
 }

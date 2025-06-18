@@ -1,6 +1,6 @@
 use std::{fs, io, path::{Path, PathBuf}};
 
-use crate::{commands::hash_object::{hash_object}, constants::{GIT_DIR, INDEX_PATH}, index::{index::{read_index, write_index}, index_entry::IndexEntry}, objects::FileMode};
+use crate::{constants::{GIT_DIR, INDEX_PATH}, index::{index::{read_index, write_index}, index_entry::IndexEntry}, objects::{write_object_from_path, FileMode}};
 
 
 pub fn run(args: &[String]) -> io::Result<()> {
@@ -26,7 +26,7 @@ pub fn run(args: &[String]) -> io::Result<()> {
             continue;
         }
 
-        let hash = hash_object(path.to_str().unwrap(), true)?;
+        let hash = write_object_from_path(crate::objects::ObjectType::Blob, &path)?; 
 
         let mode = FileMode::from_path(&path)?;
         let rel_path = path.strip_prefix(".").unwrap_or(&path).to_string_lossy().to_string();

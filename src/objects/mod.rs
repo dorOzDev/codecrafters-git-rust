@@ -1,5 +1,5 @@
-pub mod base_object;
-pub use base_object::*;
+pub mod objects;
+pub use objects::*;
 
 pub mod tree;
 pub use tree::*;
