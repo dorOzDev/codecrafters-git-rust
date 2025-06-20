@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, io, path::Path};
+use std::{io, path::Path};
 
 use crate::{commands::add, constants::INDEX_PATH, hash::GitHash, index::{index::read_index, index_entry::IndexEntry}, objects::{write_object, FileMode, ObjectType}};
 
