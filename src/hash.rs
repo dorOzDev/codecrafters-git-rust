@@ -1,3 +1,4 @@
+use core::fmt;
 use std::io;
 
 use sha1::{Sha1, Digest};
@@ -31,6 +32,12 @@ impl GitHash {
         Ok(Self(arr))
     }
 
+    pub fn from_raw_bytes(bytes: &[u8]) -> Self {
+        let mut arr = [0u8; HASH_SIZE_BYTES];
+        arr.copy_from_slice(bytes);
+        Self(arr)
+    }
+
     pub fn to_hex(&self) -> String {
         hex::encode(self.0)
     }
@@ -39,11 +46,27 @@ impl GitHash {
         &self.0
     }
 
-    /// Splits the hex hash into (dir, filename) format like Git:
-    /// "ab/cdef..." → ("ab", "cdef...")
     pub fn to_path_parts(&self) -> (String, String) {
         let hex = self.to_hex();
         let (dir, file) = hex.split_at(2);
         (dir.to_string(), file.to_string())
     }    
+}
+
+impl fmt::Display for GitHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let hex = self.to_hex();
+        let byte_string = self
+            .as_bytes()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        write!(
+            f,
+            "GitHash {{ hex: {}, bytes: [{}] }}",
+            hex, byte_string
+        )
+    }
 }

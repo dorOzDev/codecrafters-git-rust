@@ -1,4 +1,6 @@
 use std::{fs::File, io::{self, Read, Write}, path::Path};
+use log::debug;
+
 use crate::{hash::{GitHash, HASH_SIZE_BYTES}, index::index_entry::IndexEntry, objects::FileMode};
 
 /// High-level descriptor of the index file format (version 1).
@@ -41,6 +43,7 @@ impl IndexFormatDescriptor {
     pub fn write_header<W: Write>(&self, writer: &mut W, entry_count: u32) -> io::Result<()> {
         writer.write_all(self.magic)?;
         writer.write_all(&self.version.to_be_bytes())?;
+        debug!("writing to index '{}' entries", &entry_count);
         writer.write_all(&entry_count.to_be_bytes())?;
         Ok(())
     }
@@ -66,8 +69,8 @@ impl IndexFormatDescriptor {
 
         let mut hash_buf = vec![0u8; self.hash_size];
         reader.read_exact(&mut hash_buf)?;
-        let hash = GitHash::from_bytes(&hash_buf);
-
+        let hash = GitHash::from_raw_bytes(&hash_buf);
+    
         Ok(IndexEntry { mode, path, hash })
     }
 
@@ -115,7 +118,7 @@ pub fn read_index(path: &Path) -> io::Result<Vec<IndexEntry>> {
 
     // Use the descriptor to read the header
     let header = INDEX_FORMAT_V1.read_header(&mut file)?;
-
+    debug!("header.version: {} header.entry_count: {}", header.version, header.entry_count);
     let mut entries = Vec::with_capacity(header.entry_count as usize);
     for _ in 0..header.entry_count {
         let entry = INDEX_FORMAT_V1.read_entry(&mut file)?;

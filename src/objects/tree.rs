@@ -35,11 +35,11 @@ impl Tree {
 
     pub fn load_tree_from_hash(hash: &str) -> io::Result<Tree> {
         let (object_type, content) = read_object(hash)?;
-    if object_type != ObjectType::Tree {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, format!(
-            "Expected tree object, got: {}", object_type.as_str()
-        )));
-    }
+        if object_type != ObjectType::Tree {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, format!(
+                "Expected tree object, got: {}", object_type.as_str()
+            )));
+        }
 
     let mut cursor = &content[..];
     let mut entries = Vec::new();
@@ -60,7 +60,7 @@ impl Tree {
             return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "Unexpected end of hash data"));
         }
         let hash_bytes = &cursor[..HASH_SIZE_BYTES];
-        let hash = GitHash::from_bytes(hash_bytes);
+        let hash = GitHash::from_raw_bytes(hash_bytes);
         cursor = &cursor[HASH_SIZE_BYTES..];
         let object_type = ObjectType::from_mode(&mode);
 
