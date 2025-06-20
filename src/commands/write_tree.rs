@@ -27,9 +27,7 @@ pub fn run() -> io::Result<()> {
 }
 
 fn build_tree(entries: &[IndexEntry], prefix: &str) -> io::Result<GitHash> {
-    let mut content = Vec::new();
-    let mut subdirs: BTreeMap<String, Vec<IndexEntry>> = BTreeMap::new();
-    let mut file_entries = Vec::new();
+    let mut result_entries = Vec::new(); // (mode, name, hash)
 
     for entry in entries {
         if !entry.path.starts_with(prefix) {
@@ -40,29 +38,35 @@ fn build_tree(entries: &[IndexEntry], prefix: &str) -> io::Result<GitHash> {
 
         if let Some(pos) = rest.find('/') {
             let dirname = &rest[..pos];
-            subdirs.entry(dirname.to_string())
-                .or_default()
-                .push(entry.clone());
+            let full_dir = format!("{}{}/", prefix, dirname);
+            let sub_entries: Vec<IndexEntry> = entries
+                .iter()
+                .filter(|e| e.path.starts_with(&full_dir))
+                .cloned()
+                .collect();
+            let subtree_hash = build_tree(&sub_entries, &full_dir)?;
+            result_entries.push((
+                FileMode::Directory.clone(),
+                dirname.to_string(),
+                subtree_hash,
+            ));
         } else {
-            file_entries.push((rest.to_string(), entry));
+            result_entries.push((
+                entry.mode.clone(),
+                rest.to_string(),
+                entry.hash.clone(),
+            ));
         }
     }
 
-    file_entries.sort_by(|a, b| a.0.cmp(&b.0));
+    // Sort all entries by name (byte-wise)
+    result_entries.sort_by(|a, b| a.1.as_bytes().cmp(b.1.as_bytes()));
 
-    for (name, entry) in file_entries {
-        let mut line = format!("{} {}", entry.mode, name).into_bytes();
+    let mut content = Vec::new();
+    for (mode, name, hash) in result_entries {
+        let mut line = format!("{} {}", mode.as_str(), name).into_bytes();
         line.push(0);
-        line.extend_from_slice(&entry.hash.as_bytes());
-        content.extend(line);
-    }
-
-    for (dirname, sub_entries) in subdirs {
-        let dir_prefix = format!("{}{}/", prefix, dirname);
-        let subtree_hash = build_tree(&sub_entries, &dir_prefix)?;
-        let mut line = format!("{} {}", FileMode::Directory.as_str(), dirname).into_bytes();
-        line.push(0);
-        line.extend_from_slice(&subtree_hash.as_bytes());
+        line.extend_from_slice(&hash.as_bytes());
         content.extend(line);
     }
 
