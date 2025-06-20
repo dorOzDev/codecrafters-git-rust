@@ -87,7 +87,7 @@ impl FileMode {
             FileMode::Normal => "100644",
             FileMode::Executable => "100755",
             FileMode::Symlink => "120000",
-            FileMode::Directory => "040000",
+            FileMode::Directory => "40000",
         }
     }
     
