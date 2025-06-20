@@ -1,4 +1,4 @@
-use std::{io, path::Path};
+use std::{collections::HashSet, io, path::Path};
 
 use crate::{commands::add, constants::INDEX_PATH, hash::GitHash, index::{index::read_index, index_entry::IndexEntry}, objects::{write_object, FileMode, ObjectType}};
 
@@ -27,7 +27,8 @@ pub fn run() -> io::Result<()> {
 }
 
 fn build_tree(entries: &[IndexEntry], prefix: &str) -> io::Result<GitHash> {
-    let mut result_entries = Vec::new(); // (mode, name, hash)
+    let mut seen_dirs = HashSet::new();
+    let mut result_entries: Vec<(FileMode, String, GitHash)> = Vec::new();
 
     for entry in entries {
         if !entry.path.starts_with(prefix) {
@@ -38,18 +39,17 @@ fn build_tree(entries: &[IndexEntry], prefix: &str) -> io::Result<GitHash> {
 
         if let Some(pos) = rest.find('/') {
             let dirname = &rest[..pos];
-            let full_dir = format!("{}{}/", prefix, dirname);
-            let sub_entries: Vec<IndexEntry> = entries
-                .iter()
-                .filter(|e| e.path.starts_with(&full_dir))
-                .cloned()
-                .collect();
-            let subtree_hash = build_tree(&sub_entries, &full_dir)?;
-            result_entries.push((
-                FileMode::Directory.clone(),
-                dirname.to_string(),
-                subtree_hash,
-            ));
+            if seen_dirs.insert(dirname.to_string()) {
+                let full_prefix = format!("{}{}/", prefix, dirname);
+                let sub_entries: Vec<IndexEntry> = entries
+                    .iter()
+                    .filter(|e| e.path.starts_with(&full_prefix))
+                    .cloned()
+                    .collect();
+
+                let subtree_hash = build_tree(&sub_entries, &full_prefix)?;
+                result_entries.push((FileMode::Directory, dirname.to_string(), subtree_hash));
+            }
         } else {
             result_entries.push((
                 entry.mode.clone(),
@@ -59,9 +59,10 @@ fn build_tree(entries: &[IndexEntry], prefix: &str) -> io::Result<GitHash> {
         }
     }
 
-    // Sort all entries by name (byte-wise)
+    // Sort all entries by name (binary order as Git requires)
     result_entries.sort_by(|a, b| a.1.as_bytes().cmp(b.1.as_bytes()));
 
+    // Serialize tree content
     let mut content = Vec::new();
     for (mode, name, hash) in result_entries {
         let mut line = format!("{} {}", mode.as_str(), name).into_bytes();
