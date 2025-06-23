@@ -11,10 +11,10 @@ pub struct Commit {
 
 impl Commit {
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut lines = vec![format!("tree {}", self.tree)];
+        let mut lines = vec![format!("tree {}", self.tree.to_hex())];
         
         if let Some(ref parent) = self.parent_tree {
-            lines.push(format!("parent {}", parent));
+            lines.push(format!("parent {}", parent.to_hex()));
         }
 
         lines.push(format!("author {}", self.author));
