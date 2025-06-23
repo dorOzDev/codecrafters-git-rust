@@ -37,6 +37,16 @@ impl GitHash {
         arr.copy_from_slice(bytes);
         Self(arr)
     }
+    
+    pub fn from_raw_str(s: &str) -> io::Result<Self> {
+        let bytes = s.as_bytes();
+
+        if bytes.len() != HASH_SIZE_BYTES {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid hash length"));
+        }
+
+        Ok(Self::from_raw_bytes(bytes))
+    }
 
     pub fn to_hex(&self) -> String {
         hex::encode(self.0)
