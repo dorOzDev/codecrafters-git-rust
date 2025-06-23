@@ -15,6 +15,7 @@ use crate::utils::file_utils::read_file;
 pub enum ObjectType {
     Blob,
     Tree,
+    Commit,
     Unknown,
 }
 
@@ -23,6 +24,7 @@ impl ObjectType {
         match self {
             ObjectType::Blob => "blob",
             ObjectType::Tree => "tree",
+            ObjectType::Commit => "commit",
             ObjectType::Unknown => "unknown",
         }
     }
@@ -31,6 +33,7 @@ impl ObjectType {
         match str.to_ascii_lowercase().as_str() {
             "blob" => ObjectType::Blob,
             "tree" => ObjectType::Tree,
+            "commit" => ObjectType::Commit,
             _ => ObjectType::Unknown,
         }
     }
@@ -46,6 +49,20 @@ impl ObjectType {
 impl Display for ObjectType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
+    }
+}
+
+#[derive(Clone)]
+pub struct Person {
+    pub name: String,
+    pub email: String,
+    pub timestamp: i64,
+    pub timezone: String,
+}
+
+impl std::fmt::Display for Person {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} <{}> {} {}", self.name, self.email, self.timestamp, self.timezone)
     }
 }
 
