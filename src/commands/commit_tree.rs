@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, iter::Peekable, slice::Iter};
 use crate::{hash::GitHash, objects::{commit_object::{process_commit, Commit}, Person}};
 
 pub fn run(args: &[String]) -> io::Result<()> {
@@ -16,9 +16,7 @@ fn parse_commit(args: &[String]) -> io::Result<Commit> {
     }
 
     let mut iter = args.iter().peekable();
-
-    let tree_hash_hex = iter.next().unwrap();
-    let tree_hash = GitHash::from_hex(&tree_hash_hex)?;
+    let tree_hash = parse_hash(&mut iter)?;
     log::debug!("parsed tree hash");
     let mut parent: Option<GitHash> = None;
     let mut message: Option<String> = None;
@@ -26,22 +24,13 @@ fn parse_commit(args: &[String]) -> io::Result<Commit> {
     while let Some(arg) = iter.next() {
         match arg.as_str() {
             "-p" => {
-                if let Some(parent_hex) = iter.next() {
-                    parent = Some(GitHash::from_hex(parent_hex)?);
-                    log::debug!("parsed parent hash");
-                } else {
-                    return Err(Error::new(ErrorKind::InvalidInput, "missing value after -p"));
-                }
+                parent = Some(parse_hash(&mut iter)?);
             }
             "-m" => {
-                if let Some(msg) = iter.next() {
-                    message = Some(msg.clone());
-                } else {
-                    return Err(Error::new(ErrorKind::InvalidInput, "missing commit message after -m"));
-                }
+                message = Some(parse_commit_message(&mut iter));
             }
             _ => {
-                log::debug!("unknown flag {}, ignoring it", &arg);
+                log::debug!("unknown flag {}, ignoring it", arg);
             }
         }
     }
@@ -68,3 +57,31 @@ fn parse_commit(args: &[String]) -> io::Result<Commit> {
         message: message.unwrap(),
     })
 }
+
+
+fn parse_hash(iter: &mut Peekable<Iter<String>>) -> io::Result<GitHash> {
+    if let Some(hex) = iter.next() {
+        GitHash::from_hex(hex)
+    } else {
+        Err(io::Error::new(io::ErrorKind::InvalidInput, "missing value after hash flag"))
+    }
+}
+
+fn parse_commit_message(iter: &mut Peekable<Iter<String>>) -> String {
+    let mut msg_parts = Vec::new();
+
+    while let Some(part) = iter.next() {
+        if part.starts_with('-') {
+            break;
+        }
+        msg_parts.push(part.clone());
+    }
+
+    let mut msg = msg_parts.join(" ");
+    if !msg.ends_with('\n') {
+        msg.push('\n');
+    }
+
+    msg
+}
+
