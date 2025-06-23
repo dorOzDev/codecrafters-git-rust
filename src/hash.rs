@@ -24,7 +24,7 @@ impl GitHash {
 
     pub fn from_hex(s: &str) -> io::Result<Self> {
         if s.len() != HASH_HEX_LENGTH {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid hash length"));
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, format!("invalid hex length, expected {}, got {}", HASH_HEX_LENGTH, s.len())));
         }
         let bytes = hex::decode(s).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
         let mut arr = [0u8; HASH_SIZE_BYTES];
@@ -37,12 +37,12 @@ impl GitHash {
         arr.copy_from_slice(bytes);
         Self(arr)
     }
-    
+
     pub fn from_raw_str(s: &str) -> io::Result<Self> {
         let bytes = s.as_bytes();
 
         if bytes.len() != HASH_SIZE_BYTES {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid hash length"));
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, format!("invalid byes length, expected {}, got {}", HASH_SIZE_BYTES, bytes.len())));
         }
 
         Ok(Self::from_raw_bytes(bytes))
