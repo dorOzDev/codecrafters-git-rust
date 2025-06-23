@@ -18,8 +18,8 @@ fn parse_commit(args: &[String]) -> io::Result<Commit> {
     let mut iter = args.iter().peekable();
 
     let tree_hash_hex = iter.next().unwrap();
-    let tree_hash = GitHash::from_raw_str(&tree_hash_hex)?;
-
+    let tree_hash = GitHash::from_hex(&tree_hash_hex)?;
+    log::debug!("parsed tree hash");
     let mut parent: Option<GitHash> = None;
     let mut message: Option<String> = None;
 
@@ -27,7 +27,8 @@ fn parse_commit(args: &[String]) -> io::Result<Commit> {
         match arg.as_str() {
             "-p" => {
                 if let Some(parent_hex) = iter.next() {
-                    parent = Some(GitHash::from_raw_str(parent_hex)?);
+                    parent = Some(GitHash::from_hex(parent_hex)?);
+                    log::debug!("parsed parent hash");
                 } else {
                     return Err(Error::new(ErrorKind::InvalidInput, "missing value after -p"));
                 }
