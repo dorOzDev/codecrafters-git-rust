@@ -4,7 +4,7 @@ use crate::{hash::GitHash, objects::{commit_object::{process_commit, Commit}, Pe
 pub fn run(args: &[String]) -> io::Result<()> {
     let commit = parse_commit(args)?;
     let hash = process_commit(&commit)?;
-    println!("{}", hash);
+    println!("{}", hash.to_hex());
     Ok(())
 }
 
