@@ -5,6 +5,7 @@ pub mod ls_tree;
 pub mod add;
 pub mod write_tree;
 pub mod commit_tree;
+pub mod clone;
 use std::io;
 
 pub fn run(args: &[String]) -> io::Result<()> {
@@ -16,6 +17,7 @@ pub fn run(args: &[String]) -> io::Result<()> {
         Some("add") => add::run(&args[1..]),
         Some("write-tree") => write_tree::run(),
         Some("commit-tree") => commit_tree::run(&args[1..]),
+        Some("clone") => clone::run(&args[1..]),
         Some(cmd) => {
             eprintln!("unknown command: {}", cmd);
             Ok(())
