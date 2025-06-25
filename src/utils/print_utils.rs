@@ -22,3 +22,11 @@ pub fn print_hex_dump(label: &str, data: &[u8]) {
     }
     println!("--- End of {} ---", label);
 }
+
+
+pub fn print_raw_bytes(raw: &Vec<u8>) {
+    for byte in raw {
+        print!("{:02x} ", byte);
+    }
+    println!();
+}
