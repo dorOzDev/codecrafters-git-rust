@@ -1,6 +1,6 @@
 use std::io::{self, BufRead};
 
-use git_packetline::{decode, PacketLineRef, StreamingPeekableIter};
+use git_packetline::{PacketLineRef, StreamingPeekableIter};
 
 
 pub struct PacketReader<R: BufRead> {
