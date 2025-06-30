@@ -19,3 +19,4 @@ reqwest = { version = "0.11", features = ["blocking", "rustls-tls"] }
 git-packetline = { version = "0.14.3", features =["blocking-io"] }
 git-url-parse = "0.4.5"
 tokio = {version = "1.45.1", features = ["full"]}
+phf = { version = "0.12.1", default-features = false }
