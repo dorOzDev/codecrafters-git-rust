@@ -1,5 +1,5 @@
 use std::io;
-use crate::clone::{args::parse_args, refs::parse_ref_advertisement, transport::{http::fetch_refs, transport::clone_git}};
+use crate::clone::{args::parse_args, refs::parse_ref_advertisement, transport::{http::fetch_refs, pck_negotiator::run_upload_pck}};
 
 
 pub fn run(args: &[String]) -> io::Result<()> { 
@@ -7,6 +7,8 @@ pub fn run(args: &[String]) -> io::Result<()> {
     println!("Running git-clone with args: {},{}", clone_args.url, clone_args.target_dir.display());
     let refs_bytes = fetch_refs(&clone_args.url)?;
     let refs = parse_ref_advertisement(&refs_bytes)?;
-    refs.print_debug();
+
+    run_upload_pck(&refs, &clone_args.url)?;
+
     Ok(())
 }

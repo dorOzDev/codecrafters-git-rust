@@ -1,5 +1,7 @@
 use reqwest::{blocking::Client, header::USER_AGENT};
 
+use crate::clone::transport::pck_negotiator::UploadPackNegotiator;
+
 
 pub fn fetch_refs(url: &str) -> Result<Vec<u8>, std::io::Error> {
     let service_url = format!("{}/info/refs?service=git-upload-pack", url.trim_end_matches('/'));
@@ -23,4 +25,12 @@ pub fn fetch_refs(url: &str) -> Result<Vec<u8>, std::io::Error> {
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
 
     Ok(bytes.to_vec())
+}
+
+pub struct HttpNegotiator;
+
+impl UploadPackNegotiator for HttpNegotiator {
+    fn negogiate(&self, url: &str, ref_advertied: &crate::clone::refs::RefAdvertisement) -> std::io::Result<()> {
+        todo!()
+    }
 }
