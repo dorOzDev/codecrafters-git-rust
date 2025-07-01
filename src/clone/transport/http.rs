@@ -2,7 +2,7 @@ use std::io;
 
 use reqwest::{blocking::Client, header::USER_AGENT};
 
-use crate::{clone::{packet_line::{packet_line_builder::{UploadPackV2RequestBuilder}, pck_negotiator::UploadPackNegotiator}, refs::RefAdvertisement}, utils::print_utils::print_raw_bytes};
+use crate::{clone::{packet_line::{packet_line_builder::{UploadPackV2RequestBuilder}, pck_negotiator::UploadPackNegotiator}, refs::RefAdvertisement}};
 
 
 pub fn fetch_refs(url: &str) -> Result<Vec<u8>, std::io::Error> {
@@ -52,31 +52,16 @@ impl UploadPackNegotiator for HttpNegotiator {
             .done()
             .build();
     
-        let builder = client
+        let res = client
             .post(url)
             .header("Content-Type", "application/x-git-upload-pack-request")
             .header("Accept", "application/x-git-upload-pack-result")
             .header("User-Agent", "git/2.42.0")
             .header("git-protocol", "version=2")
-            .body(body.clone()); // You’ll need to clone `body` if you want to inspect it
+            .body(body.clone())
+            .send()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("request failed: {}", e)))?; // You’ll need to clone `body` if you want to inspect it
 
-        // Build the request manually
-        let request = builder
-            .try_clone()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to clone request builder"))?
-            .build()
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-
-        // Print info
-        println!("--- HTTP Request ---");
-        println!("{} {}", request.method(), request.url());
-        for (key, value) in request.headers() {
-            println!("{}: {}", key, value.to_str().unwrap_or("<binary>"));
-        }
-        println!("Body ({} bytes):", request.body().map_or(0, |_| body.len()));
-
-        
-        let res = builder.send().map_err(|e| io::Error::new(io::ErrorKind::Other, format!("request failed: {}", e)))?;
         let res_bytes = &res.bytes().map_err(|e| io::Error::new(io::ErrorKind::Other, format!("failed reading repsonse: {}", e)))?;
         println!("Response size: {} bytes", res_bytes.len());
 

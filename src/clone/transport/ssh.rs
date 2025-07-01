@@ -1,4 +1,4 @@
-use crate::clone::packet_line::pck_negotiator::UploadPackNegotiator;
+use crate::clone::{packet_line::pck_negotiator::UploadPackNegotiator, refs::RefAdvertisement};
 
 
 
@@ -6,7 +6,7 @@ pub struct SshNegotiator;
 
 impl UploadPackNegotiator for SshNegotiator {
 
-    fn negogiate(&self, url: &str, ref_advertied: &crate::clone::refs::RefAdvertisement) -> std::io::Result<()> {
+    fn negogiate(&self, _url: &str, _ref_advertied: &RefAdvertisement) -> std::io::Result<()> {
         todo!()
     }
 }
