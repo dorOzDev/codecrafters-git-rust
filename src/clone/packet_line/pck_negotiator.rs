@@ -16,7 +16,7 @@ static NEGOTIATOR_MAP: Lazy<HashMap<&'static str, Arc<dyn UploadPackNegotiator>>
 });
 
 fn get_negotiator(scheme: &Scheme) -> Option<Arc<dyn UploadPackNegotiator>> {
-    let key = scheme.to_string().to_ascii_lowercase(); // "Http" -> "http"
+    let key = scheme.to_string().to_ascii_lowercase();
     NEGOTIATOR_MAP.get(key.as_str()).cloned()
 }
 

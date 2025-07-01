@@ -1,7 +1,7 @@
 use std::io::{self, BufReader, Cursor};
 
 use git_packetline::{PacketLineRef};
-use crate::clone::{caps::{parse_capabilities, Capabilities}, packet_reader::PacketReader};
+use crate::clone::{caps::{parse_capabilities, Capabilities}, packet_line::packet_reader::PacketReader};
 
 
 pub fn parse_ref_advertisement(bytes: &[u8]) -> std::io::Result<RefAdvertisement> {

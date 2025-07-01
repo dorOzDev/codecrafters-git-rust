@@ -1,4 +1,5 @@
-use crate::clone::transport::pck_negotiator::UploadPackNegotiator;
+use crate::clone::packet_line::pck_negotiator::UploadPackNegotiator;
+
 
 
 pub struct SshNegotiator;
