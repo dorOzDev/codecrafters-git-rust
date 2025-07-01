@@ -51,14 +51,13 @@ impl UploadPackNegotiator for HttpNegotiator {
             .fetch_option("ofs-delta")
             .done()
             .build();
-        println!("raw bytes before request");
-        
     
         let builder = client
             .post(url)
             .header("Content-Type", "application/x-git-upload-pack-request")
             .header("Accept", "application/x-git-upload-pack-result")
             .header("User-Agent", "git/2.42.0")
+            .header("git-protocol", "version=2")
             .body(body.clone()); // You’ll need to clone `body` if you want to inspect it
 
         // Build the request manually
