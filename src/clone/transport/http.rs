@@ -2,7 +2,7 @@ use std::io;
 
 use reqwest::{blocking::Client, header::USER_AGENT};
 
-use crate::{clone::{refs::RefAdvertisement, packet_line::pck_negotiator::UploadPackNegotiator, want::send_want}, utils::print_utils::print_raw_bytes};
+use crate::{clone::{packet_line::{packet_line_builder::{UploadPackV2RequestBuilder}, pck_negotiator::UploadPackNegotiator}, refs::RefAdvertisement}, utils::print_utils::print_raw_bytes};
 
 
 pub fn fetch_refs(url: &str) -> Result<Vec<u8>, std::io::Error> {
@@ -32,14 +32,9 @@ pub fn fetch_refs(url: &str) -> Result<Vec<u8>, std::io::Error> {
 pub struct HttpNegotiator;
 
 impl UploadPackNegotiator for HttpNegotiator {
-    fn negogiate(&self, base_url: &str, ref_advertisement: &RefAdvertisement) -> std::io::Result<()> {
+    fn negogiate(&self, base_url: &str, ref_adv: &RefAdvertisement) -> std::io::Result<()> {
 
         let client = Client::new();
-
-        // Get the HEAD hash
-        let want_hash = ref_advertisement.head.as_ref().ok_or_else(|| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, "HEAD not found in advertisement")
-        })?;
 
         // Construct POST body
         let url = if base_url.ends_with("git-upload-pack") {
@@ -48,13 +43,22 @@ impl UploadPackNegotiator for HttpNegotiator {
             format!("{}/git-upload-pack", base_url.trim_end_matches('/')).to_string()
         };
 
-        let mut body = Vec::new();
-        send_want(&mut body, &want_hash, &ref_advertisement.capabilities)?;
+        let body = UploadPackV2RequestBuilder::new()
+            .want(&ref_adv.head.clone().unwrap_or_default())
+            .deepen(10)
+            .agent("git/2.42.0")
+            .fetch_option("thin-pack")
+            .fetch_option("ofs-delta")
+            .done()
+            .build();
+        println!("raw bytes before request");
+        
+    
         let builder = client
             .post(url)
             .header("Content-Type", "application/x-git-upload-pack-request")
             .header("Accept", "application/x-git-upload-pack-result")
-            .header("User-Agent", "git/2.42.0").header("Content-Type", "application/x-git-upload-pack-request")
+            .header("User-Agent", "git/2.42.0")
             .body(body.clone()); // You’ll need to clone `body` if you want to inspect it
 
         // Build the request manually
@@ -71,13 +75,11 @@ impl UploadPackNegotiator for HttpNegotiator {
             println!("{}: {}", key, value.to_str().unwrap_or("<binary>"));
         }
         println!("Body ({} bytes):", request.body().map_or(0, |_| body.len()));
-        print_raw_bytes(&body);
 
         
         let res = builder.send().map_err(|e| io::Error::new(io::ErrorKind::Other, format!("request failed: {}", e)))?;
-        // let res_bytes = &res.bytes().map_err(|e| io::Error::new(io::ErrorKind::Other, format!("failed reading repsonse: {}", e)))?;
-        // println!("Response size: {} bytes", res_bytes.len());
-        println!("Response code: {}", res.status());
+        let res_bytes = &res.bytes().map_err(|e| io::Error::new(io::ErrorKind::Other, format!("failed reading repsonse: {}", e)))?;
+        println!("Response size: {} bytes", res_bytes.len());
 
         Ok(()) 
     }
