@@ -2,7 +2,7 @@ use std::io;
 
 use reqwest::{blocking::Client, header::USER_AGENT};
 
-use crate::{clone::{packet_line::{packet_line_builder::{UploadPackV2RequestBuilder}, pck_negotiator::UploadPackNegotiator}, refs::RefAdvertisement}};
+use crate::{clone::{packet_line::{packet_line_builder::{UploadPackV2RequestBuilder}, pkt_negotiator::UploadPackNegotiator}, refs::RefAdvertisement}};
 
 
 pub fn fetch_refs(url: &str) -> Result<Vec<u8>, std::io::Error> {
@@ -11,7 +11,7 @@ pub fn fetch_refs(url: &str) -> Result<Vec<u8>, std::io::Error> {
     let client = Client::new();
     let response = client
         .get(&service_url)
-        .header(USER_AGENT, "git/2.42.0")
+        .header(USER_AGENT, GIT_AGENT)
         .send()
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
 
@@ -33,20 +33,13 @@ pub struct HttpNegotiator;
 
 impl UploadPackNegotiator for HttpNegotiator {
     fn negogiate(&self, base_url: &str, ref_adv: &RefAdvertisement) -> std::io::Result<()> {
-
         let client = Client::new();
-
-        // Construct POST body
-        let url = if base_url.ends_with("git-upload-pack") {
-            base_url.to_string()
-        } else {
-            format!("{}/git-upload-pack", base_url.trim_end_matches('/')).to_string()
-        };
+        let url = clean_url(&base_url);
 
         let body = UploadPackV2RequestBuilder::new()
             .want(&ref_adv.head.clone().unwrap_or_default())
             .deepen(10)
-            .agent("git/2.42.0")
+            .agent(GIT_AGENT)
             .fetch_option("thin-pack")
             .fetch_option("ofs-delta")
             .done()
@@ -56,7 +49,7 @@ impl UploadPackNegotiator for HttpNegotiator {
             .post(url)
             .header("Content-Type", "application/x-git-upload-pack-request")
             .header("Accept", "application/x-git-upload-pack-result")
-            .header("User-Agent", "git/2.42.0")
+            .header("User-Agent", GIT_AGENT)
             .header("git-protocol", "version=2")
             .body(body.clone())
             .send()
@@ -69,3 +62,13 @@ impl UploadPackNegotiator for HttpNegotiator {
     }
 }
 
+fn clean_url(url: &str) -> String {
+
+    return if url.ends_with(GIT_UPLOAD_PACK) {
+        url.to_string()
+    } 
+    else {
+        format!("{}/{}", url.trim_end_matches('/'), GIT_UPLOAD_PACK).to_string()};
+    }
+const GIT_UPLOAD_PACK: &'static str = "git-upload-pack";
+pub const GIT_AGENT: &'static str = "git/2.42.0";

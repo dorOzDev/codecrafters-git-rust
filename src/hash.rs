@@ -60,7 +60,11 @@ impl GitHash {
         let hex = self.to_hex();
         let (dir, file) = hex.split_at(2);
         (dir.to_string(), file.to_string())
-    }    
+    }
+
+    pub fn hash_version() -> &'static str {
+        return "sha1";
+    }
 }
 
 impl fmt::Display for GitHash {

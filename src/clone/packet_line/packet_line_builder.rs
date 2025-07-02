@@ -1,3 +1,5 @@
+use crate::hash::GitHash;
+
 pub struct UploadPackV2RequestBuilder {
     command: String,
     object_format: String,
@@ -14,7 +16,7 @@ impl UploadPackV2RequestBuilder {
     pub fn new() -> Self {
         Self {
             command: "fetch".into(),
-            object_format: "sha1".into(),
+            object_format: GitHash::hash_version().to_string(), 
             agent: None,
             wants: Vec::new(),
             shallows: Vec::new(),
