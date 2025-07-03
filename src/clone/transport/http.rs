@@ -1,7 +1,6 @@
 use std::io;
 
-use bytes::Bytes;
-use reqwest::{blocking::Client, header::USER_AGENT};
+use reqwest::{blocking::{Client, Response}, header::USER_AGENT};
 
 use crate::{clone::{packet_line::{packet_line_builder::{UploadPackV2RequestBuilder}, pkt_negotiator::UploadPackNegotiator}, refs::RefAdvertisement}};
 
@@ -33,7 +32,7 @@ pub fn fetch_refs(url: &str) -> Result<Vec<u8>, std::io::Error> {
 pub struct HttpNegotiator;
 
 impl UploadPackNegotiator for HttpNegotiator {
-    fn negogiate(&self, base_url: &str, ref_adv: &RefAdvertisement) -> std::io::Result<Bytes> {
+    fn negogiate(&self, base_url: &str, ref_adv: &RefAdvertisement) -> std::io::Result<Response> {
         let client = Client::new();
         let url = clean_url(&base_url);
         let head_hash = ref_adv.head.as_ref().ok_or_else(|| {io::Error::new(io::ErrorKind::InvalidData, "No HEAD advertised in refs")})?;
@@ -55,12 +54,9 @@ impl UploadPackNegotiator for HttpNegotiator {
             .header("git-protocol", "version=2")
             .body(body.clone())
             .send()
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("request failed: {}", e)))?; // You’ll need to clone `body` if you want to inspect it
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("request failed: {}", e)))?;
 
-        let res_bytes = res.bytes().map_err(|e| io::Error::new(io::ErrorKind::Other, format!("failed reading repsonse: {}", e)))?;
-        println!("Response size: {} bytes", res_bytes.len());
-
-        Ok(res_bytes) 
+        Ok(res) 
     }
 }
 
