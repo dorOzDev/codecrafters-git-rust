@@ -35,9 +35,10 @@ impl UploadPackNegotiator for HttpNegotiator {
     fn negogiate(&self, base_url: &str, ref_adv: &RefAdvertisement) -> std::io::Result<()> {
         let client = Client::new();
         let url = clean_url(&base_url);
+        let head_hash = ref_adv.head.as_ref().ok_or_else(|| {io::Error::new(io::ErrorKind::InvalidData, "No HEAD advertised in refs")})?;
 
         let body = UploadPackV2RequestBuilder::new()
-            .want(&ref_adv.head.clone().unwrap_or_default())
+            .want(&head_hash)
             .deepen(10)
             .agent(GIT_AGENT)
             .fetch_option("thin-pack")
