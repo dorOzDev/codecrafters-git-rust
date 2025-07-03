@@ -47,7 +47,6 @@ impl UploadPackV2RequestBuilder {
     }
 
     pub fn want(mut self, hash: &str) -> Self {
-        println!("> want hash {}", &hash);
         self.wants.push(hash.to_owned());
         self
     }
