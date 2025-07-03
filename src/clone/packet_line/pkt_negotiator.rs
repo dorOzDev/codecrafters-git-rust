@@ -1,5 +1,6 @@
 use std::{collections::HashMap, io::{self, Result}, sync::Arc};
 
+use bytes::Bytes;
 use git_url_parse::{GitUrl, Scheme};
 use once_cell::sync::Lazy;
 
@@ -21,7 +22,7 @@ fn get_negotiator(scheme: &Scheme) -> Option<Arc<dyn UploadPackNegotiator>> {
 }
 
 pub trait UploadPackNegotiator: Send + Sync {
-    fn negogiate(&self, url: &str, ref_advertied: &RefAdvertisement) -> Result<()>;
+    fn negogiate(&self, url: &str, ref_advertied: &RefAdvertisement) -> Result<Bytes>;
 }
 
 pub fn run_upload_pck(ref_ads: &RefAdvertisement, url: &str) -> Result<()> {
@@ -31,3 +32,14 @@ pub fn run_upload_pck(ref_ads: &RefAdvertisement, url: &str) -> Result<()> {
     Ok(())
 }
 
+pub struct GitServerRef {
+    pub hash: String,
+    pub refname: String,
+    pub symref_target: Option<String>,
+    pub peeled: Option<String>,
+}
+
+pub struct GitUploadPackResponse {
+    pub refs: Vec<GitServerRef>,
+    pub capabilities: Vec<String>,
+}
