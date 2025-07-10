@@ -1,3 +1,7 @@
+use std::io::{self, Error};
+
+use reqwest::header::{HeaderMap};
+
 
 pub fn print_hex_dump(label: &str, data: &[u8]) {
     println!("--- {} ---", label);
@@ -29,4 +33,16 @@ pub fn print_raw_bytes(raw: &Vec<u8>) {
         print!("{:02x} ", byte);
     }
     println!();
+}
+
+pub fn print_headers(headers: &HeaderMap) -> io::Result<()> {
+    for (header_name, header_val) in headers.iter() {
+        let header_val_str = header_val
+            .to_str()
+            .map_err(|e| Error::new(io::ErrorKind::InvalidData, format!("invalid header value: {}", e)))?;
+
+        println!("Header-Name: {}, Header-Value: {}", header_name, header_val_str);
+    }
+
+    Ok(())
 }
