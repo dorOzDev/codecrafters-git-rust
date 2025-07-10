@@ -39,7 +39,6 @@ impl UploadPackNegotiator for HttpNegotiator {
 
         let body = UploadPackV2RequestBuilder::new()
             .want(&head_hash)
-            .deepen(10)
             .agent(GIT_AGENT)
             .fetch_option("thin-pack")
             .fetch_option("ofs-delta")
