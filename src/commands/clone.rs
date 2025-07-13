@@ -1,6 +1,6 @@
 use std::{fs, io::{self}, path::Path};
 
-use crate::{clone::{args::parse_args, packet_line::{pkt_negotiator::negogiate_want}, refs::parse_ref_advertisement, transport::http::fetch_refs}, commands::init::init_git_dir, hash::{GitHash, HASH_HEX_LENGTH}};
+use crate::{clone::{args::parse_args, packet_line::{pkt_line_unpacker::unpack_pkt_res, pkt_negotiator::negogiate_want}, refs::parse_ref_advertisement, transport::http::fetch_refs}, commands::init::init_git_dir, hash::{GitHash, HASH_HEX_LENGTH}};
 
 
 pub fn run(args: &[String]) -> io::Result<()> { 
@@ -14,6 +14,7 @@ pub fn run(args: &[String]) -> io::Result<()> {
         fs::create_dir_all(&clone_args.target_dir)?;
     }
     init_git_dir(&clone_args.target_dir)?;
+    unpack_pkt_res(res)?;
     Ok(())
 }
 
