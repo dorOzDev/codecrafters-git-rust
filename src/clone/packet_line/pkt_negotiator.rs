@@ -27,5 +27,10 @@ pub fn negogiate_want(ref_ads: &RefAdvertisement, url: &str) -> Result<Response>
     let negotiator = get_negotiator(&git_url.scheme).ok_or_else(|| {io::Error::new(io::ErrorKind::Unsupported, format!("unsupported scheme: {}", git_url.scheme))})?;
     let res = negotiator.negogiate(&url, &ref_ads)?;
 
+    if !res.status().is_success() {
+        eprintln!("Fetch failed with status: {}", res.status());
+        return Err(io::Error::new(io::ErrorKind::Other, format!("Git server responsed with failure status: {}", res.status())))
+    }
+
     Ok(res)
 }
