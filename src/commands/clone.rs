@@ -16,7 +16,7 @@ pub fn run(args: &[String]) -> io::Result<()> {
     init_git_dir(&clone_args.target_dir)?;
     //TODO  revisit this, the info writted to packed_ref file might be incorrect
     refs.write_packed_refs(&clone_args.target_dir)?;
-    unpack_pkt_res(res)?;
+    unpack_pkt_res(res, &clone_args.target_dir)?;
     Ok(())
 }
 
