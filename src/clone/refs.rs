@@ -1,4 +1,4 @@
-use std::io::{self, BufReader, Cursor};
+use std::{fs, io::{self, BufReader, Cursor}, path::Path};
 
 use git_packetline::{PacketLineRef};
 use crate::clone::{caps::{parse_capabilities, Capabilities}, packet_line::packet_reader::PacketReader};
@@ -81,6 +81,18 @@ pub struct AdvertisedRef {
 }
 
 impl RefAdvertisement {
+
+    pub fn write_packed_refs(&self, repo_root: &Path) -> io::Result<()> {
+        let mut content = String::from("# pack-refs with: peeled fully-peeled sorted\n");
+
+        for r in &self.refs {
+            content.push_str(&format!("{} {}\n", r.hash, r.name));
+        }
+
+        let path = repo_root.join(".git/packed-refs");
+        fs::write(path, content)
+    }
+
     pub fn print_debug(&self) {
         println!("--- RefAdvertisement ---");
 
