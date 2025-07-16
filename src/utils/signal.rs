@@ -16,12 +16,10 @@ pub fn register_signal_handler<F>(event_name: EventName, handler: F)
 where
     F: Fn() + Send + 'static,
 {
-    // Warn the developer that this may override an existing handler.
-    eprintln!(
-        "Warning: Registering a handler for '{}' may override any previously set handler for this event.",
+    log::warn!(
+        "Registering a handler for '{}' may override any previously set handler for this event.",
         event_name.as_str()
     );
-
     match event_name {
         _ctrl_c => {
             ctrlc::set_handler(move || {
