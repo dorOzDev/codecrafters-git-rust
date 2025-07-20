@@ -60,7 +60,6 @@ impl PackHeader {
         Self::SIZE
     } 
 
-    /// Try to parse a packfile header from the given bytes
     pub fn from_bytes(bytes: &[u8]) -> io::Result<Self> {
         if bytes.len() < Self::SIZE {
             return Err(io::Error::new(
@@ -92,16 +91,3 @@ impl PackHeader {
     }
 }
 
-pub fn find_and_parse_pack_header(bytes: &[u8]) -> io::Result<(usize, PackHeader)> {
-    if let Some(offset) = bytes.windows(4).position(|w| w == b"PACK") {
-        let header_start = offset;
-        let header_end = header_start + PackHeader::SIZE;
-        if header_end > bytes.len() {
-            return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "Not enough bytes for packfile header"));
-        }
-        let header = PackHeader::from_bytes(&bytes[header_start..header_end])?;
-        Ok((header_start, header))
-    } else {
-        Err(io::Error::new(io::ErrorKind::InvalidData, "PACK magic number not found"))
-    }
-}
