@@ -91,3 +91,8 @@ impl PackHeader {
     }
 }
 
+pub fn parse_pack_header<R: Read>(cursor: &mut BufferedStreamCursor<R>) -> io::Result<PackHeader> {
+    cursor.ensure_available(PackHeader::SIZE)?;
+    let bytes = cursor.read(PackHeader::SIZE)?;
+    PackHeader::from_bytes(bytes)
+}
