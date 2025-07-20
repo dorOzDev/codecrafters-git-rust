@@ -1,6 +1,5 @@
 use crate::utils::streamer::Streamer;
 use std::{io::{self, Result, Read}, path::Path};
-use bytes::Bytes;
 use reqwest::blocking::Response;
 
 
@@ -9,7 +8,6 @@ pub fn unpack_pkt_res(res: Response, repo_root: &Path) -> Result<()> {
     if !res.status().is_success() {
         return Err(io::Error::new(io::ErrorKind::Other, format!("unable to unpack response, response status is: {}", res.status())))
     }
-    // Use a chunk size of 8192 (8 KB) for streaming
     let chunk_size = 8192;
     let mut res = res;
     println!("Streaming response to find PACK header...");
@@ -104,14 +102,6 @@ impl PackHeader {
             num_objects,
         })
     }
-}
-
-
-fn get_pack_start(bytes: &Bytes) -> usize {
-    bytes
-    .windows(4)
-    .position(|w| w == b"PACK")
-    .unwrap_or(bytes.len())
 }
 
 pub fn find_and_parse_pack_header(bytes: &[u8]) -> io::Result<(usize, PackHeader)> {
