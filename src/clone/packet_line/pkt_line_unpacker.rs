@@ -1,23 +1,53 @@
-use crate::utils::streamer::Streamer;
+use crate::utils::streamer::{BufferedStreamCursor, Streamer};
 use std::{io::{self, Result, Read}, path::Path};
 use reqwest::blocking::Response;
-
-
 
 pub fn unpack_pkt_res(res: Response, repo_root: &Path) -> Result<()> {
     if !res.status().is_success() {
         return Err(io::Error::new(io::ErrorKind::Other, format!("unable to unpack response, response status is: {}", res.status())))
     }
-    let chunk_size = 8192;
-    let mut res = res;
-    println!("Streaming response to find PACK header...");
-    match stream_until_pack(&mut res, chunk_size)? {
-        Some(offset) => println!("Found PACK header at offset {}", offset),
-        None => println!("PACK header not found in response."),
+
+    let mut cursor = BufferedStreamCursor::with_chunk_size(res, 128);
+    print_lines_until_pack(&mut cursor)?;
+
+    Ok(())
+}
+pub fn print_lines_until_pack<R: Read>(cursor: &mut BufferedStreamCursor<R>) -> io::Result<()> {
+    let pack_magic = b"PACK";
+
+    loop {
+        cursor.ensure_available(4)?;
+        let len_bytes = cursor.read(4)?;
+        if len_bytes == b"0000" {
+            continue; 
+        }
+
+        let hex_str = std::str::from_utf8(len_bytes)
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid hex in pkt-line"))?;
+        let total_len = usize::from_str_radix(hex_str, 16)
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid hex value"))?;
+
+        if total_len < 4 {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid pkt-line length"));
+        }
+
+        let content_len = total_len - 4;
+        cursor.ensure_available(content_len)?;
+        let content = cursor.read(content_len)?;
+
+        if let Some(pos) = content.windows(4).position(|w| w == pack_magic) {
+            let before = &content[..pos];
+            print!("{}", String::from_utf8_lossy(before));
+            break; 
+        } else {
+            print!("{}", String::from_utf8_lossy(content));
+        }
     }
 
     Ok(())
 }
+
+
 
 pub fn stream_until_pack<R: Read>(mut reader: R, chunk_size: usize) -> io::Result<Option<usize>> {
     let mut found_offset: Option<usize> = None;
