@@ -1,4 +1,4 @@
-use crate::utils::streamer::{BufferedStreamCursor, Streamer};
+use crate::utils::streamer::{BufferedStreamCursor};
 use std::{io::{self, Result, Read}, path::Path};
 use reqwest::blocking::Response;
 
@@ -45,48 +45,6 @@ pub fn print_lines_until_pack<R: Read>(cursor: &mut BufferedStreamCursor<R>) -> 
     }
 
     Ok(())
-}
-
-
-
-pub fn stream_until_pack<R: Read>(mut reader: R, chunk_size: usize) -> io::Result<Option<usize>> {
-    let mut found_offset: Option<usize> = None;
-    let mut window = Vec::new();
-    let pack_magic = b"PACK";
-    let mut streamer = Streamer::new(&mut reader, chunk_size);
-    println!("Data before PACK (utf8):");
-    let process = |chunk: &[u8], _so_far: u64| -> Option<bool> {
-        let search_start = if window.len() >= 3 { window.len() - 3 } else { 0 };
-        window.extend_from_slice(chunk);
-        if let Some(pos) = window[search_start..].windows(4).position(|w| w == pack_magic) {
-            // Print only the bytes before the PACK magic in the window
-            let end = search_start + pos;
-            if end > 0 {
-                let s = String::from_utf8_lossy(&window[..end]);
-                print!("{}", s);
-            }
-            found_offset = Some(end);
-            return Some(true);
-        } else {
-            // If PACK not found, print all except the last 3 bytes (which may be part of PACK in next chunk)
-            if window.len() > 3 {
-                let s = String::from_utf8_lossy(&window[..window.len()-3]);
-                print!("{}", s);
-                // Retain only the last 3 bytes in the window
-                window.drain(..window.len()-3);
-            }
-        }
-        None
-    };
-    let (_total_read, _last_buf) = streamer.stream(Some(process))?;
-    if let Some(offset) = found_offset {
-        println!();
-        Ok(Some(offset))
-    } else {
-        println!();
-        println!("No PACK header found.");
-        Ok(None)
-    }
 }
 
 pub struct PackHeader {
