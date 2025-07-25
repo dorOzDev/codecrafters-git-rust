@@ -63,6 +63,11 @@ impl<R: Read> BufferedStreamCursor<R> {
         Ok(bytes.to_vec())
     }
 
+    pub fn peek(&mut self, n: usize) -> io::Result<&[u8]> {
+        self.ensure_available(n)?;
+        Ok(&self.buffer[self.cursor..self.cursor + n])
+    }
+
     /// Drops all bytes that have already been read
     pub fn drain_consumed(&mut self) {
         if self.cursor > 0 {

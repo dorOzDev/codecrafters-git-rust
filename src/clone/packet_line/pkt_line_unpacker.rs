@@ -9,14 +9,16 @@ pub fn unpack_pkt_res(res: Response, repo_root: &Path) -> Result<()> {
 
     let mut cursor = BufferedStreamCursor::with_chunk_size(res, 128);
     print_lines_until_pack(&mut cursor)?;
-
+    let pack_header = parse_pack_header(&mut cursor)?;
+    println!("Pack Header numer of objects: {:?}, Version: {}", pack_header.num_objects, pack_header.version);
+    cursor.drain_consumed();
     Ok(())
 }
+
 pub fn print_lines_until_pack<R: Read>(cursor: &mut BufferedStreamCursor<R>) -> io::Result<()> {
     let pack_magic = b"PACK";
 
     loop {
-        cursor.ensure_available(4)?;
         let len_bytes = cursor.read(4)?;
         if len_bytes == b"0000" {
             continue; 
@@ -32,24 +34,27 @@ pub fn print_lines_until_pack<R: Read>(cursor: &mut BufferedStreamCursor<R>) -> 
         }
 
         let content_len = total_len - 4;
-        cursor.ensure_available(content_len)?;
-        let content = cursor.read(content_len)?;
+        let content = cursor.peek(content_len)?;
 
         if let Some(pos) = content.windows(4).position(|w| w == pack_magic) {
             let before = &content[..pos];
             print!("{}", String::from_utf8_lossy(before));
+            cursor.advance(pos);
+            let next_bytes = cursor.peek(4)?;
             break; 
         } else {
             print!("{}", String::from_utf8_lossy(content));
+            cursor.advance(content_len);
         }
     }
-
+    
     Ok(())
 }
 
+
 pub struct PackHeader {
     pub signature: [u8; 4],
-    pub version: u32,       
+    pub version: u32,
     pub num_objects: u32,
 }
 
@@ -58,41 +63,36 @@ impl PackHeader {
 
     pub fn header_len() -> usize {
         Self::SIZE
-    } 
+    }
 
-    pub fn from_bytes(bytes: &[u8]) -> io::Result<Self> {
-        if bytes.len() < Self::SIZE {
-            return Err(io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                format!(
-                    "Packfile header too small: expected at least {} bytes, got {}",
-                    Self::SIZE,
-                    bytes.len()
-                ),
-            ));
-        }
-
-        let signature = <[u8; 4]>::try_from(&bytes[0..4]).unwrap();
-        if &signature != b"PACK" {
+    /// Reads and parses the full 12-byte pack header from the stream cursor.
+    pub fn from_cursor<R: Read>(cursor: &mut BufferedStreamCursor<R>) -> io::Result<Self> {
+        cursor.ensure_available(Self::SIZE)?;
+        let magic = cursor.peek(4)?;
+        if magic != b"PACK" {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                format!("Invalid packfile signature: {:?}", signature),
+                format!("Expected 'PACK' magic at cursor, found {:?}", magic),
             ));
         }
 
-        let version = u32::from_be_bytes(bytes[4..8].try_into().unwrap());
-        let num_objects = u32::from_be_bytes(bytes[8..12].try_into().unwrap());
+        // Now consume the 4-byte magic
+        cursor.advance(4);
+
+        // Read and parse version and num_objects
+        let header_bytes = cursor.read(8)?; // version (4) + num_objects (4)
+        let version = u32::from_be_bytes(header_bytes[0..4].try_into().unwrap());
+        let num_objects = u32::from_be_bytes(header_bytes[4..8].try_into().unwrap());
 
         Ok(Self {
-            signature,
+            signature: *b"PACK",
             version,
             num_objects,
         })
     }
 }
 
+
 pub fn parse_pack_header<R: Read>(cursor: &mut BufferedStreamCursor<R>) -> io::Result<PackHeader> {
-    cursor.ensure_available(PackHeader::SIZE)?;
-    let bytes = cursor.read(PackHeader::SIZE)?;
-    PackHeader::from_bytes(bytes)
+    PackHeader::from_cursor(cursor)
 }
