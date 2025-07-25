@@ -1,6 +1,7 @@
-use crate::utils::streamer::{BufferedStreamCursor};
-use std::{io::{self, Result, Read}, path::Path};
+use crate::utils::{file_utils::generate_temp_filename, streamer::{BufferedStreamCursor, TeeWriter}};
+use std::{fs::{self, File}, io::{self, Read, Result, Write}, path::Path};
 use reqwest::blocking::Response;
+use sha1::{Digest, Sha1};
 
 pub fn unpack_pkt_res(res: Response, repo_root: &Path) -> Result<()> {
     if !res.status().is_success() {
@@ -9,9 +10,16 @@ pub fn unpack_pkt_res(res: Response, repo_root: &Path) -> Result<()> {
 
     let mut cursor = BufferedStreamCursor::with_chunk_size(res, 128);
     print_lines_until_pack(&mut cursor)?;
-    let pack_header = parse_pack_header(&mut cursor)?;
+    let pack_dir = repo_root.join("objects").join("pack");
+    fs::create_dir_all(&pack_dir)?;
+    let temp_path = pack_dir.join(generate_temp_filename(None));
+    let mut pack_file = File::create(&temp_path)?;
+    let mut hasher = Sha1::new();
+    let mut tree_writer = TeeWriter::new(&mut pack_file, &mut hasher);
+    let pack_header = parse_pack_header(&mut cursor, &mut tree_writer)?;
     println!("Pack Header numer of objects: {:?}, Version: {}", pack_header.num_objects, pack_header.version);
     cursor.drain_consumed();
+    tree_writer.flush()?;
     Ok(())
 }
 
@@ -59,6 +67,8 @@ pub struct PackHeader {
 
 impl PackHeader {
     pub const SIZE: usize = 12;
+    pub const MAGIC: &'static [u8; 4] = b"PACK";
+
 
     pub fn header_len() -> usize {
         Self::SIZE
@@ -68,7 +78,7 @@ impl PackHeader {
     pub fn from_cursor<R: Read>(cursor: &mut BufferedStreamCursor<R>) -> io::Result<Self> {
         cursor.ensure_available(Self::SIZE)?;
         let magic = cursor.peek(4)?;
-        if magic != b"PACK" {
+        if magic != Self::MAGIC {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 format!("Expected 'PACK' magic at cursor, found {:?}", magic),
@@ -84,14 +94,28 @@ impl PackHeader {
         let num_objects = u32::from_be_bytes(header_bytes[4..8].try_into().unwrap());
 
         Ok(Self {
-            signature: *b"PACK",
+            signature: *Self::MAGIC,
             version,
             num_objects,
         })
     }
+
+    pub fn to_bytes(&self) -> [u8; 12] {
+        let mut buf = [0u8; 12];
+        buf[0..4].copy_from_slice(&self.signature); // "PACK"
+        buf[4..8].copy_from_slice(&self.version.to_be_bytes());
+        buf[8..12].copy_from_slice(&self.num_objects.to_be_bytes());
+        buf
+    }
 }
 
 
-pub fn parse_pack_header<R: Read>(cursor: &mut BufferedStreamCursor<R>) -> io::Result<PackHeader> {
-    PackHeader::from_cursor(cursor)
+pub fn parse_pack_header<R: Read, W: Write>(
+    cursor: &mut BufferedStreamCursor<R>,
+    tee: &mut TeeWriter<W, Sha1>,) -> io::Result<PackHeader> {
+    let header = PackHeader::from_cursor(cursor)?;
+    tee.write_all(&header.to_bytes())?;
+    println!("{:02X?}", &header.to_bytes());
+
+    Ok(header)
 }

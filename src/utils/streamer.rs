@@ -92,4 +92,8 @@ impl<'a, W: Write, H: Digest> TeeWriter<'a, W, H> {
         self.hasher.update(buf);
         Ok(())
     }
+
+    pub fn flush(&mut self) -> io::Result<()> {
+        self.writer.flush()
+    }
 }
