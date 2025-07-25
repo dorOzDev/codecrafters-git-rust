@@ -40,7 +40,6 @@ pub fn print_lines_until_pack<R: Read>(cursor: &mut BufferedStreamCursor<R>) -> 
             let before = &content[..pos];
             print!("{}", String::from_utf8_lossy(before));
             cursor.advance(pos);
-            let next_bytes = cursor.peek(4)?;
             break; 
         } else {
             print!("{}", String::from_utf8_lossy(content));
