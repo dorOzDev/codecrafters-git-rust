@@ -16,16 +16,18 @@ pub enum ObjectType {
     Blob,
     Tree,
     Commit,
-    Unknown,
+    Unknown(u8),
 }
 
 impl ObjectType {
+    pub const UNKNOWN_FROM_STR_SENTINEL: u8 = 0xff;
+
     pub fn as_str(&self) -> &'static str {
         match self {
             ObjectType::Blob => "blob",
             ObjectType::Tree => "tree",
             ObjectType::Commit => "commit",
-            ObjectType::Unknown => "unknown",
+            ObjectType::Unknown(_) => "unknown",
         }
     }
 
@@ -34,7 +36,7 @@ impl ObjectType {
             "blob" => ObjectType::Blob,
             "tree" => ObjectType::Tree,
             "commit" => ObjectType::Commit,
-            _ => ObjectType::Unknown,
+            _ => ObjectType::Unknown(ObjectType::UNKNOWN_FROM_STR_SENTINEL),
         }
     }
 
@@ -42,6 +44,15 @@ impl ObjectType {
         match mode {
             FileMode::Directory=> ObjectType::Tree,
             _ => ObjectType::Blob,
+        }
+    }
+
+    pub fn from_code(code: u8) -> Self {
+        match code {
+            1 => ObjectType::Commit,
+            2 => ObjectType::Tree,
+            3 => ObjectType::Blob,
+            other => ObjectType::Unknown(other),
         }
     }
 }

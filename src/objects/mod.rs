@@ -5,3 +5,4 @@ pub mod tree;
 pub use tree::*;
 
 pub mod commit_object;
+pub mod parser;

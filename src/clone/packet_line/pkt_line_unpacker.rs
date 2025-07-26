@@ -1,4 +1,4 @@
-use crate::utils::{file_utils::generate_temp_filename, streamer::{BufferedStreamCursor, TeeWriter}};
+use crate::{constants::GIT_OBJECTS_DIR, objects::parser::object_header_parser::parse_object_header, utils::{file_utils::generate_temp_filename, streamer::{BufferedStreamCursor, TeeWriter}}};
 use std::{fs::{self, File}, io::{self, Read, Result, Write}, path::Path};
 use reqwest::blocking::Response;
 use sha1::{Digest, Sha1};
@@ -10,7 +10,7 @@ pub fn unpack_pkt_res(res: Response, repo_root: &Path) -> Result<()> {
 
     let mut cursor = BufferedStreamCursor::with_chunk_size(res, 128);
     print_lines_until_pack(&mut cursor)?;
-    let pack_dir = repo_root.join("objects").join("pack");
+    let pack_dir = repo_root.join(GIT_OBJECTS_DIR).join("pack");
     fs::create_dir_all(&pack_dir)?;
     let temp_path = pack_dir.join(generate_temp_filename(None));
     let mut pack_file = File::create(&temp_path)?;
@@ -19,7 +19,16 @@ pub fn unpack_pkt_res(res: Response, repo_root: &Path) -> Result<()> {
     let pack_header = parse_pack_header(&mut cursor, &mut tree_writer)?;
     println!("Pack Header numer of objects: {:?}, Version: {}", pack_header.num_objects, pack_header.version);
     cursor.drain_consumed();
+    persist_objects(&mut cursor, &mut tree_writer, &pack_header)?;
     tree_writer.flush()?;
+    Ok(())
+}
+
+pub fn persist_objects<R: Read, W: Write>(cursor: &mut BufferedStreamCursor<R>, tee: &mut TeeWriter<W, Sha1>, pack_header: &PackHeader) -> io::Result<()> {
+    for _ in 0..pack_header.num_objects {
+        let object_header = parse_object_header(cursor)?;
+        println!("Parsed object: {:?}", object_header);
+    }
     Ok(())
 }
 
@@ -57,7 +66,6 @@ pub fn print_lines_until_pack<R: Read>(cursor: &mut BufferedStreamCursor<R>) -> 
     
     Ok(())
 }
-
 
 pub struct PackHeader {
     pub signature: [u8; 4],
